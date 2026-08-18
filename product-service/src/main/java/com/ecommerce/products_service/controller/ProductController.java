@@ -45,4 +45,9 @@ public class ProductController {
     public ProductResponseDTO updateProductById(@PathVariable String id, @RequestBody @Valid ProductRequestDTO productRequestDTO) {
         return productService.updateProductById(id, productRequestDTO);
     }
+
+    @GetMapping("/test-fail")
+    public void testFail() {
+        throw new RuntimeException("test fail");
+    }
 }
