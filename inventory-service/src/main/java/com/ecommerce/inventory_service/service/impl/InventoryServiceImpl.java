@@ -34,7 +34,7 @@ public class InventoryServiceImpl implements InventoryService {
     @Transactional
     public InventoryResponseDTO createInventory(InventoryRequestDTO inventoryRequestDTO) {
 
-        boolean exists = inventoryRepository.existBySku(inventoryRequestDTO.getSku());
+        boolean exists = inventoryRepository.existsBySku(inventoryRequestDTO.getSku());
         if (exists) {
             throw new RuntimeException(String.format("Inventory already exists for sku: %s", inventoryRequestDTO.getSku()));
         }
