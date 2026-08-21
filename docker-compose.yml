@@ -31,7 +31,7 @@ services:
       POSTGRES_PASSWORD: admin
       POSTGRES_DB: order-db
     volumes:
-      - order_data:/var/lib/mysql
+      - order_data:/var/lib/postgresql/data
 
 volumes:
   mongo_data:
