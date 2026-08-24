@@ -5,7 +5,9 @@ spring:
     config:
       server:
         git:
-          uri: file:///Users/rmontero/Repos/microservices-ecommerce/config-data
+          uri: https://github.com/rmontero90/microservices-config-data.git
+          username: ${GITHUB_USER}
+          password: ${GITHUB_TOKEN}
           clone-on-start: true
           default-label: main
 server:
