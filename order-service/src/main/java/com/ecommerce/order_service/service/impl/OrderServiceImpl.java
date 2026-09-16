@@ -9,6 +9,7 @@ import com.ecommerce.order_service.repository.OrderRepository;
 import com.ecommerce.order_service.service.OrderService;
 import com.ecommerce.order_service.service.client.InventoryClient;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -16,7 +17,6 @@ import org.springframework.cloud.context.config.annotation.RefreshScope;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
@@ -37,12 +37,13 @@ public class OrderServiceImpl implements OrderService {
 
     public OrderResponse fallbackMethod(OrderRequest orderRequest, String userId, Throwable throwable) {
         log.error("Circuit Breaker activated. Cause: {}", throwable.getMessage());
-        return new OrderResponse(0L, "00000", Collections.emptyList());
+        throw new RuntimeException("Inventory service not available. Try again later.");
     }
 
     @Override
     @Transactional
     @CircuitBreaker(name = "inventory", fallbackMethod = "fallbackMethod")
+    @Retry(name = "inventory")
     public OrderResponse placeOrder(OrderRequest orderRequest, String userId) {
 
         log.info("Placing new order");
