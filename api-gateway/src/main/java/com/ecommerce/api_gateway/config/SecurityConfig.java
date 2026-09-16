@@ -1,7 +1,9 @@
 package com.ecommerce.api_gateway.config;
 
+import com.ecommerce.api_gateway.enums.Role;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -22,11 +24,22 @@ public class SecurityConfig {
     public SecurityWebFilterChain springSecurityFilterChain(ServerHttpSecurity http) {
         http.csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .authorizeExchange(authorize -> authorize.pathMatchers("/eureka/**").permitAll()
+
+                        .pathMatchers(HttpMethod.GET, "/api/v1/product/**").permitAll()
+                        .pathMatchers(HttpMethod.GET, "/api/v1/inventory/**").permitAll()
+                        .pathMatchers("/api/v1/product/**").hasRole(Role.ADMIN.name())
+                        .pathMatchers("/api/v1/inventory/**").hasRole(Role.ADMIN.name())
+
+                        .pathMatchers(HttpMethod.POST, "/api/v1/order").hasRole(Role.USER.name())
+
+                        .pathMatchers(HttpMethod.GET, "/api/v1/order/**").hasAnyRole(Role.ADMIN.name(), Role.USER.name())
+                        .pathMatchers(HttpMethod.DELETE, "/api/v1/order/**").hasRole(Role.ADMIN.name())
+                        .pathMatchers(HttpMethod.PUT, "/api/v1/order/**").hasRole(Role.ADMIN.name())
                         .anyExchange().authenticated()
                 )
-                .oauth2ResourceServer(oAuth2 -> oAuth2.jwt(jwtSpec -> {
-
-                }));
+                .oauth2ResourceServer(oAuth2 -> oAuth2
+                        .jwt(jwt -> jwt.jwtAuthenticationConverter(reactiveJwtAuthenticationConverterAdapter()))
+                );
         return http.build();
     }
 

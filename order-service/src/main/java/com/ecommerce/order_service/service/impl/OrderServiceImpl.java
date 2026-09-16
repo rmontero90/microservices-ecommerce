@@ -8,14 +8,16 @@ import com.ecommerce.order_service.model.Order;
 import com.ecommerce.order_service.repository.OrderRepository;
 import com.ecommerce.order_service.service.OrderService;
 import com.ecommerce.order_service.service.client.InventoryClient;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.context.config.annotation.RefreshScope;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.reactive.function.client.WebClient;
 
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
@@ -33,9 +35,15 @@ public class OrderServiceImpl implements OrderService {
     @Value("${order.enabled:true}")
     private boolean ordersEnabled;
 
+    public OrderResponse fallbackMethod(OrderRequest orderRequest, String userId, Throwable throwable) {
+        log.error("Circuit Breaker activated. Cause: {}", throwable.getMessage());
+        return new OrderResponse(0L, "00000", Collections.emptyList());
+    }
+
     @Override
     @Transactional
-    public OrderResponse placeOrder(OrderRequest orderRequest) {
+    @CircuitBreaker(name = "inventory", fallbackMethod = "fallbackMethod")
+    public OrderResponse placeOrder(OrderRequest orderRequest, String userId) {
 
         log.info("Placing new order");
 
@@ -45,6 +53,7 @@ public class OrderServiceImpl implements OrderService {
         }
 
         Order order = orderMapper.toOrder(orderRequest);
+        order.setUserId(userId);
         for (var item : order.getOrderLineItemsList()) {
             String sku = item.getSku();
             Integer quantity = item.getQuantity();
@@ -69,12 +78,25 @@ public class OrderServiceImpl implements OrderService {
         log.info("Saved order ID: {}", savedOrder.getId());
         return orderMapper.toOrderResponse(savedOrder);
     }
+//    @Override
+//    @Transactional(readOnly = true)
+//    public List<OrderResponse> getAllOrders() {
+//        return orderRepository.findAll()
+//                .stream()
+//                .map(orderMapper::toOrderResponse)
+//                .toList();
+//    }
 
     @Override
-    @Transactional(readOnly = true)
-    public List<OrderResponse> getAllOrders() {
-        return orderRepository.findAll()
-                .stream()
+    public List<OrderResponse> getOrders(String userId, boolean isAdmin) {
+        List<Order> orders;
+
+        if (isAdmin) {
+            orders = orderRepository.findAll();
+        } else {
+            orders = orderRepository.findByUserId(userId);
+        }
+        return orders.stream()
                 .map(orderMapper::toOrderResponse)
                 .toList();
     }
