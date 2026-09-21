@@ -20,7 +20,6 @@ public class OrderEventsListener {
 
         log.info("Event Received in Inventory for Order: {}", event.orderNumber());
 
-        event.items().forEach(item -> {
            try {
 
                SimpleMailMessage message = new SimpleMailMessage();
@@ -36,6 +35,5 @@ public class OrderEventsListener {
            } catch (Exception e) {
                log.error("Error sending confirmation email to: {}", e.getMessage());
            }
-        });
     }
 }

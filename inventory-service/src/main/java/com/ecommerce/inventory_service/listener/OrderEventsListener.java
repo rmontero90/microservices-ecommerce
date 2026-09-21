@@ -1,10 +1,12 @@
 package com.ecommerce.inventory_service.listener;
 
+import com.ecommerce.inventory_service.event.OrderCancelledEvent;
 import com.ecommerce.inventory_service.event.OrderPlacedEvent;
 import com.ecommerce.inventory_service.service.InventoryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Component;
 
 @RequiredArgsConstructor
@@ -12,19 +14,41 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class OrderEventsListener {
     private final InventoryService inventoryService;
+    private final RabbitTemplate rabbitTemplate;
 
     @RabbitListener(queues = "inventory-queue")
     public void handleOrderPlacedEvent(OrderPlacedEvent event) {
 
         log.info("Event Received in Inventory for Order: {}", event.orderNumber());
 
-        event.items().forEach(item -> {
-           try {
-               inventoryService.reduceStock(item.sku(), item.quantity());
-               log.info("Order placed item {} with quantity {}", item.sku(), item.quantity());
-           } catch (Exception e) {
-               log.error("Error while processing order placed item SKU {}: {}", item.sku(), e.getMessage());
-           }
-        });
+        try {
+
+            boolean allProductsInStock = event.items().stream()
+                    .allMatch(item -> inventoryService.isStock(item.sku(), item.quantity()));
+
+            if (allProductsInStock) {
+                cancelOrder(event, "Insufficient stock");
+                return;
+            }
+
+            event.items().forEach(item -> {
+                inventoryService.reduceStock(item.sku(), item.quantity());
+            });
+            rabbitTemplate.convertAndSend("order-events", "order.confirmed", event);
+
+            log.info("Order placed for order: {}", event.orderNumber());
+        } catch (Exception e) {
+            log.error("Unexpected Error: {}", e.getMessage());
+        }
     }
+
+    private void cancelOrder(OrderPlacedEvent event, String reason) {
+        OrderCancelledEvent cancelledEvent = new OrderCancelledEvent(
+                event.orderNumber(), event.email(), reason
+        );
+
+        rabbitTemplate.convertAndSend("order-events","order.cancelled", cancelledEvent);
+
+    }
+
 }
