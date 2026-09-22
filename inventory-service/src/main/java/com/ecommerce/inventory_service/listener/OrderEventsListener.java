@@ -26,7 +26,7 @@ public class OrderEventsListener {
             boolean allProductsInStock = event.items().stream()
                     .allMatch(item -> inventoryService.isStock(item.sku(), item.quantity()));
 
-            if (allProductsInStock) {
+            if (!allProductsInStock) {
                 cancelOrder(event, "Insufficient stock");
                 return;
             }
@@ -44,7 +44,7 @@ public class OrderEventsListener {
 
     private void cancelOrder(OrderPlacedEvent event, String reason) {
         OrderCancelledEvent cancelledEvent = new OrderCancelledEvent(
-                event.orderNumber(), event.email(), reason
+                event.orderNumber(), event.email(),reason
         );
 
         rabbitTemplate.convertAndSend("order-events","order.cancelled", cancelledEvent);

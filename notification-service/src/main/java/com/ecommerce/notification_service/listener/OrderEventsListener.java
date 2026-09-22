@@ -16,9 +16,9 @@ public class OrderEventsListener {
     private final JavaMailSender mailSender;
 
     @RabbitListener(queues = "notification-queue")
-    public void handleOrderPlacedEvent(OrderPlacedEvent event) {
+    public void handleOrderConfirmedEvent(OrderPlacedEvent event) {
 
-        log.info("Event Received in Inventory for Order: {}", event.orderNumber());
+        log.info("Confirmed for Order: {}", event.orderNumber());
 
            try {
 
@@ -31,7 +31,7 @@ public class OrderEventsListener {
                mailSender.send(message);
 
                log.info("Sending confirmation email to: {}", event.email());
-               log.info("Email succesfully for order: {}", event.orderNumber());
+               log.info("Email successfully for order: {}", event.orderNumber());
            } catch (Exception e) {
                log.error("Error sending confirmation email to: {}", e.getMessage());
            }

@@ -12,8 +12,6 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class RabbitMQConfig {
 
-    public static final String INVENTORY_QUEUE = "inventory-queue";
-
     @Bean
     public MessageConverter messageConverter() {
         return new JacksonJsonMessageConverter();
@@ -21,8 +19,8 @@ public class RabbitMQConfig {
 
 
     @Bean
-    public Queue orderQueue() {
-        return new Queue(INVENTORY_QUEUE, true);
+    public Queue inventoryQueue() {
+        return new Queue("inventory-queue", true);
     }
 
     @Bean
@@ -31,7 +29,7 @@ public class RabbitMQConfig {
     }
 
     @Bean
-    public Binding orderEventsBinding(Queue inventoriesQueue, TopicExchange orderEventsExchange) {
-        return BindingBuilder.bind(inventoriesQueue).to(orderEventsExchange).with("order.placed");
+    public Binding orderEventsBinding(Queue inventoryQueue, TopicExchange orderEventsExchange) {
+        return BindingBuilder.bind(inventoryQueue).to(orderEventsExchange).with("order.placed");
     }
 }
