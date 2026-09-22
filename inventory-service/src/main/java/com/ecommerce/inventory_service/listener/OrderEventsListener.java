@@ -44,7 +44,7 @@ public class OrderEventsListener {
 
     private void cancelOrder(OrderPlacedEvent event, String reason) {
         OrderCancelledEvent cancelledEvent = new OrderCancelledEvent(
-                event.orderNumber(), event.email(),reason
+                event.orderNumber(), event.email(), reason
         );
 
         rabbitTemplate.convertAndSend("order-events","order.cancelled", cancelledEvent);

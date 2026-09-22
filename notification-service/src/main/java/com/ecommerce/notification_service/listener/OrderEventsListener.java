@@ -1,6 +1,7 @@
 package com.ecommerce.notification_service.listener;
 
-import com.ecommerce.notification_service.event.OrderPlacedEvent;
+import com.ecommerce.notification_service.event.OrderCancelledEvent;
+import com.ecommerce.notification_service.event.OrderConfirmedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
@@ -16,24 +17,41 @@ public class OrderEventsListener {
     private final JavaMailSender mailSender;
 
     @RabbitListener(queues = "notification-queue")
-    public void handleOrderConfirmedEvent(OrderPlacedEvent event) {
+    public void handleOrderConfirmedEvent(OrderConfirmedEvent event) {
 
         log.info("Confirmed for Order: {}", event.orderNumber());
 
-           try {
-
-               SimpleMailMessage message = new SimpleMailMessage();
-               message.setFrom("pedidos@ecommerce.com");
-               message.setTo(event.email());
-               message.setSubject("Order Placed - "+event.orderNumber());
-               message.setText("Hello!\n\n" +
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom("pedidos@ecommerce.com");
+            message.setTo(event.email());
+            message.setSubject("Order Placed - "+event.orderNumber());
+            message.setText("Hello!\n\n" +
                        "Thank for you purchase from us");
-               mailSender.send(message);
+            mailSender.send(message);
 
-               log.info("Sending confirmation email to: {}", event.email());
-               log.info("Email successfully for order: {}", event.orderNumber());
-           } catch (Exception e) {
-               log.error("Error sending confirmation email to: {}", e.getMessage());
-           }
+            log.info("Sending confirmation email to: {}", event.email());
+            log.info("Email successfully for order: {}", event.orderNumber());
+        } catch (Exception e) {
+            log.error("Error sending confirmation email to: {}", e.getMessage());
+        }
+    }
+    @RabbitListener(queues = "notification-queue")
+    public void handleOrderCancelledEvent(OrderCancelledEvent event) {
+        log.info("Cancelled for Order: {}", event.orderNumber());
+
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setTo(event.email());
+            message.setSubject("Order Cancelled - "+ event.orderNumber());
+            message.setText("Hello!\n\n" +
+                    "Sorry, the order has been cancelled.\n\n" + event.reason());
+            mailSender.send(message);
+
+            log.info("Sending Cancellation email to: {}", event.email());
+            log.info("Email successfully for cancellation of order: {}", event.orderNumber());
+        } catch (Exception e) {
+            log.error("Error sending cancellation email to: {}", e.getMessage());
+        }
     }
 }

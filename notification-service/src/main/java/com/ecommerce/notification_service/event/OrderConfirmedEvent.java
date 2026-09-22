@@ -3,6 +3,6 @@ package com.ecommerce.notification_service.event;
 import lombok.Builder;
 
 @Builder
-public record OrderConfirmedEvent(String number, String email) {
+public record OrderConfirmedEvent(String number, String email, String orderNumber) {
 
 }
