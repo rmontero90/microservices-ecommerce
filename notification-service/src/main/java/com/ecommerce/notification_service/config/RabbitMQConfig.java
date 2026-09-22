@@ -1,24 +1,45 @@
 package com.ecommerce.notification_service.config;
 
-import org.springframework.amqp.core.Binding;
-import org.springframework.amqp.core.BindingBuilder;
-import org.springframework.amqp.core.Queue;
-import org.springframework.amqp.core.TopicExchange;
+import com.ecommerce.notification_service.event.OrderCancelledEvent;
+import com.ecommerce.notification_service.event.OrderConfirmedEvent;
+import org.springframework.amqp.core.*;
+import org.springframework.amqp.support.converter.DefaultClassMapper;
 import org.springframework.amqp.support.converter.JacksonJsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.util.HashMap;
+import java.util.Map;
+
 @Configuration
 public class RabbitMQConfig {
     @Bean
     public MessageConverter messageConverter() {
-        return new JacksonJsonMessageConverter();
+
+        JacksonJsonMessageConverter converter = new JacksonJsonMessageConverter();
+        DefaultClassMapper classMapper = new DefaultClassMapper();
+
+        classMapper.setTrustedPackages("*");
+
+        Map<String, Class<?>> idClassMapping = new HashMap<>();
+
+        idClassMapping.put("com.ecommerce.inventory_service.event.OrderPlacedEvent", OrderConfirmedEvent.class);
+
+        idClassMapping.put("com.ecommerce.inventory_service.event.OrderCancelledEvent", OrderCancelledEvent.class);
+
+        classMapper.setIdClassMapping(idClassMapping);
+        converter.setClassMapper(classMapper);
+
+        return converter;
     }
 
     @Bean
     public Queue notificationQueue() {
-        return new Queue("notification-queue", true);
+        return QueueBuilder.durable("notification-queue").
+                withArgument("x-dead-letter-exchange", "notification-dlx")
+                .withArgument("x-dead-letter-routing-key", "notification.dead")
+                .build();
     }
 
     @Bean
@@ -36,4 +57,18 @@ public class RabbitMQConfig {
         return BindingBuilder.bind(notificationQueue).to(orderEventsExchange).with("order.cancelled");
     }
 
+    @Bean
+    public DirectExchange deadLettersExchange() {
+        return new DirectExchange("notification-dlx");
+    }
+
+    @Bean
+    public Queue deadLettersQueue() {
+        return new Queue("notification-dlq", true);
+    }
+
+    @Bean
+    public Binding deadLetterBinding(Queue deadLettersQueue, DirectExchange deadLettersExchange) {
+        return BindingBuilder.bind(deadLettersQueue).to(deadLettersExchange).with("notification.dead");
+    }
 }
