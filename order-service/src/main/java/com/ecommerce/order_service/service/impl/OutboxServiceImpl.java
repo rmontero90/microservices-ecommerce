@@ -11,11 +11,12 @@ import org.springframework.stereotype.Service;
 import tools.jackson.databind.ObjectMapper;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @Slf4j
 @RequiredArgsConstructor
-public class OutboxServiceImpl  implements OutboxService {
+public class OutboxServiceImpl implements OutboxService {
 
     private final OutboxRepository outboxRepository;
     private final ObjectMapper objectMapper;
@@ -35,5 +36,20 @@ public class OutboxServiceImpl  implements OutboxService {
         outboxRepository.save(outboxEvent);
         log.info("Event assured in Outbox saved with order: {}", event.orderNumber() );
 
+    }
+
+    @Override
+    public List<OutboxEvent> getPendingEvents() {
+        return outboxRepository.findByProcessedFalse();
+    }
+
+    @Override
+    public void MarkAsProcessed(Long id) {
+        outboxRepository.findById(id).ifPresent(event -> {
+                event.setProcessed(true);
+                outboxRepository.save(event);
+                log.info("Event marked as processed in Outbox saved with id: {}", id);
+
+        });
     }
 }
