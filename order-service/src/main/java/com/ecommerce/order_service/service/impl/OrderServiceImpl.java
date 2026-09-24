@@ -9,8 +9,10 @@ import com.ecommerce.order_service.model.Order;
 import com.ecommerce.order_service.model.OrderStatus;
 import com.ecommerce.order_service.repository.OrderRepository;
 import com.ecommerce.order_service.service.OrderService;
+import com.ecommerce.order_service.service.OutboxService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.AmqpException;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.context.config.annotation.RefreshScope;
@@ -32,6 +34,7 @@ public class OrderServiceImpl implements OrderService {
 //    private final WebClient.Builder webClientBuilder;
 //    private final InventoryClient inventoryClient;
     private final RabbitTemplate rabbitTemplate;
+    private final OutboxService outboxService;
 
     @Value("${order.enabled:true}")
     private boolean ordersEnabled;
@@ -88,7 +91,17 @@ public class OrderServiceImpl implements OrderService {
                 savedOrder.getOrderNumber(), orderRequest.getEmail(), orderItems
         );
 
-        rabbitTemplate.convertAndSend("order-events", "order.placed", event);
+        boolean sentToRabbit = false;
+
+        try {
+            rabbitTemplate.convertAndSend("order-events", "order.placed", event);
+            sentToRabbit = true;
+            log.info("Sent order: {} placed sent to RabbitMQ", savedOrder.getOrderNumber());
+        } catch (AmqpException e) {
+            log.error("Error while sending order: {} to RabbitMQ.", savedOrder.getOrderNumber());
+        }
+
+        outboxService.saveOrderPlacedEvent(event, sentToRabbit);
 
         return orderMapper.toOrderResponse(savedOrder);
     }
