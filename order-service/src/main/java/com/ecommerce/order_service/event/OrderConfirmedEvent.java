@@ -1,4 +1,4 @@
-package com.ecommerce.inventory_service.event;
+package com.ecommerce.order_service.event;
 
 import lombok.Builder;
 

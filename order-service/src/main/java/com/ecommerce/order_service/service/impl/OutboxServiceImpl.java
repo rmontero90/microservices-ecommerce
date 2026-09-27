@@ -44,7 +44,7 @@ public class OutboxServiceImpl implements OutboxService {
     }
 
     @Override
-    public void MarkAsProcessed(Long id) {
+    public void markAsProcessed(Long id) {
         outboxRepository.findById(id).ifPresent(event -> {
                 event.setProcessed(true);
                 outboxRepository.save(event);
